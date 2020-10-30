@@ -1,7 +1,9 @@
 <div>Slouch Detection</div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/0.9.0/p5.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/0.9.0/addons/p5.sound.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/0.9.0/addons/p5.dom.min.js"></script>
 <script src="https://unpkg.com/ml5@latest/dist/ml5.min.js"></script>
+<script src='scripts/state-machine.min.js'></script>
 <script type="text/javascript">
   // Classifier Variable
   let classifier;
@@ -14,6 +16,33 @@
   // To store the classification
   let label = "";
 
+  let soundSuccess;
+  let soundFailure;
+
+  var fsm = new StateMachine({
+  init: 'bad',
+    transitions: [
+      { name: 'straighten',      from: ['bad', 'neutral'], to: 'good' },
+      { name: 'slouch',   from: ['neutral', 'good'], to: 'bad'  },
+      { name: 'meh',   from: ['bad', 'good'], to: 'neutral'  }
+    ],
+    methods: {
+      onStraighten:     function() {
+        console.log('straightening')
+        soundSuccess.play();
+        return "green";
+      },
+      onSlouch:   function() {
+        console.log('slouching')
+        soundFailure.play();
+        return "red";
+      },
+      onMeh: function() {
+        console.log('meh')
+      }
+    }
+  });
+
   // Load the model first
   function preload() {
     classifier = ml5.imageClassifier(imageModelURL + 'model.json');
@@ -25,6 +54,13 @@
     video = createCapture(VIDEO);
     video.size(320, 240);
     video.hide();
+
+    soundFormats('wav');
+    soundSuccess = loadSound('sounds/success.wav');
+    soundFailure= loadSound('sounds/failure.wav');
+
+    // frame rate
+    frameRate(30);
 
     flippedVideo = ml5.flipImage(video);
     // Start classifying
@@ -56,19 +92,28 @@
 
   // handle an posture classification, return a color
   function handle(e) {
+    console.log(e)
     switch (e) {
       case "Bad Sitting Posture":
+        if (!fsm.is("bad")) {
+          return fsm.slouch();
+        }
         return "red"
-        break;
-      case "Good Sitting Posture":
-        return "green"
-        break;
       case "Bad Standing Posture":
+        if (!fsm.is("bad")) {
+          return fsm.slouch();
+        }
         return "red"
-        break;
-      case "Good Standing Posture":
+      case "Good Sitting Posture":
+        if (!fsm.is("good")) {
+          return fsm.straighten();
+        }
         return "green"
-        break;
+      case "Good Standing Posture":
+        if (!fsm.is("good")) {
+          return fsm.straighten();
+        }
+        return "green";
     }
 
     return "black"
