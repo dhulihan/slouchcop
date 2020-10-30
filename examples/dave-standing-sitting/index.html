@@ -1,4 +1,12 @@
-<div>Slouch Detection</div>
+<h2>Slouch Detection</h2>
+<div>
+  <label>
+    <input type="checkbox" id="sound" checked=true> Sound
+  </label>
+  <label>
+    <input type="checkbox" id="paused" > Pause
+  </label>
+</div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/0.9.0/p5.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/0.9.0/addons/p5.sound.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/0.9.0/addons/p5.dom.min.js"></script>
@@ -8,7 +16,7 @@
   // Classifier Variable
   let classifier;
   // Model URL
-  let imageModelURL = './model/';
+  let imageModelURL = './model-2/';
 
   // Video
   let video;
@@ -18,9 +26,14 @@
 
   let soundSuccess;
   let soundFailure;
+  let currentColor = "black";
+  let badCounter = 0;
+  let badThreshold = 5;
+  let goodCounter = 0;
+  let goodThreshold = 5;
 
   var fsm = new StateMachine({
-  init: 'bad',
+  init: 'neutral',
     transitions: [
       { name: 'straighten',      from: ['bad', 'neutral'], to: 'good' },
       { name: 'slouch',   from: ['neutral', 'good'], to: 'bad'  },
@@ -29,13 +42,13 @@
     methods: {
       onStraighten:     function() {
         console.log('straightening')
-        soundSuccess.play();
-        return "green";
+        if (soundEnabled()) { soundSuccess.play(); }
+        currentColor =  "green";
       },
       onSlouch:   function() {
         console.log('slouching')
-        soundFailure.play();
-        return "red";
+        if (soundEnabled()) { soundFailure.play(); }
+        currentColor = "red";
       },
       onMeh: function() {
         console.log('meh')
@@ -49,15 +62,15 @@
   }
 
   function setup() {
-    createCanvas(320, 260);
+    createCanvas(640, 500);
     // Create the video
     video = createCapture(VIDEO);
-    video.size(320, 240);
+    video.size(640, 480);
     video.hide();
 
     soundFormats('wav');
     soundSuccess = loadSound('sounds/success.wav');
-    soundFailure= loadSound('sounds/failure.wav');
+    soundFailure = loadSound('sounds/failure.wav');
 
     // frame rate
     frameRate(30);
@@ -68,8 +81,12 @@
   }
 
   function draw() {
-    labelColor = handle(label)
-    background(labelColor);
+    if (paused()) {
+      return;
+    }
+
+    handle(label)
+    background(currentColor);
     // Draw the video
     image(flippedVideo, 0, 0);
 
@@ -90,33 +107,69 @@
 
   }
 
+  function paused() {
+    return document.getElementById("paused").checked
+  }
+
+  function soundEnabled() {
+    return document.getElementById("sound").checked
+  }
+
   // handle an posture classification, return a color
   function handle(e) {
-    console.log(e)
     switch (e) {
       case "Bad Sitting Posture":
-        if (!fsm.is("bad")) {
-          return fsm.slouch();
-        }
-        return "red"
+        return badRoutine()
       case "Bad Standing Posture":
-        if (!fsm.is("bad")) {
-          return fsm.slouch();
-        }
-        return "red"
+        return badRoutine()
       case "Good Sitting Posture":
-        if (!fsm.is("good")) {
-          return fsm.straighten();
-        }
-        return "green"
+        return goodRoutine()
       case "Good Standing Posture":
-        if (!fsm.is("good")) {
-          return fsm.straighten();
-        }
-        return "green";
+        return goodRoutine()
     }
 
     return "black"
+  }
+
+  function badRoutine() {
+    badCounter += 1;
+    //console.log(badCounter + "/" + badThreshold + " bad")
+    if (badCounter < badThreshold) {
+      return;
+    }
+
+    if (badCounter > badThreshold) {
+      resetCounters();
+    }
+
+    if (!fsm.is("bad")) {
+      fsm.slouch();
+      resetCounters();
+      return;
+    }
+  }
+
+  function goodRoutine() {
+    //console.log(goodCounter + "/" + goodThreshold + " good")
+    goodCounter += 1;
+    if (goodCounter < goodThreshold) {
+      return;
+    }
+
+    if (goodCounter > goodThreshold) {
+      resetCounters();
+    }
+
+    if (!fsm.is("good")) {
+      fsm.straighten();
+      resetCounters();
+      return;
+    }
+  }
+
+  function resetCounters() {
+      goodCounter = 0;
+      badCounter = 0;
   }
 
   // When we get a result
