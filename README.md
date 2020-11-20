@@ -4,10 +4,6 @@ An ML-powered posture detector.
 
 Note: this project is highly experimental and just a proof-of-concept. ML models in this project are trained on specific humans, and may not work for you.
 
-## Setup
-
-* This project uses [teachable machine] to generate ML models.
-
 ## Example - dave standing/sitting
 
 Use [teachable machine](https://teachablemachine.withgoogle.com/) to generate a model with four classifications:
