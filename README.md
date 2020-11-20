@@ -18,6 +18,11 @@ Use [teachable machine](https://teachablemachine.withgoogle.com/) to generate a 
 ```
 cd /examples/dave-standing-sitting
 ./run
-open localhost:8081
 ```
+
+Open [localhost:8081](http://localhost:8081) in your browser and grant access to your webcam.
+
+![](./examples/dave-standing-sitting/bad-standing.png)
+
+![](./examples/dave-standing-sitting/good-standing.png)
 
